@@ -1,3 +1,5 @@
+import { SFX } from "./effects.js";
+
 export function setupObstacles(gameState, spawnSlideCoins) {
 
     // ─── Spawn helpers ─────────────────────────────────────────────────────────
@@ -434,7 +436,10 @@ export function setupObstacles(gameState, spawnSlideCoins) {
     onUpdate("falling_obstacle", (obs) => {
         if (obs.pos.y < height() - 50) {
             obs.pos.y += obs.fallSpeed * dt();
-            if (obs.pos.y > height() - 50) obs.pos.y = height() - 50;
+            if (obs.pos.y >= height() - 50) {
+                obs.pos.y = height() - 50;
+                if (!obs._landed) { obs._landed = true; SFX.thud(); }
+            }
         }
     });
 

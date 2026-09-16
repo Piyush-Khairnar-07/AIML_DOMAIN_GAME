@@ -158,19 +158,161 @@ export function setupEffects() {
     };
 }
 
-// Audio-ready event hooks (no-op by default, replace with sound calls later)
+
+// ── Web Audio Engine ────────────────────────────────────────────────────────────
+// Lazy-init: AudioContext is created on first SFX call (after a user gesture),
+// which satisfies browser autoplay policy on both desktop and mobile.
+
+let _audioCtx = null;
+
+function _getCtx() {
+    if (!_audioCtx) {
+        try {
+            _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) { return null; }
+        // Resume suspended context on any subsequent user gesture (mobile Safari)
+        const _tryResume = () => {
+            if (_audioCtx && _audioCtx.state === "suspended") _audioCtx.resume();
+        };
+        document.addEventListener("click",      _tryResume);
+        document.addEventListener("touchstart", _tryResume, { passive: true });
+        document.addEventListener("keydown",    _tryResume);
+    }
+    // Best-effort resume every time we need audio
+    if (_audioCtx.state === "suspended") _audioCtx.resume();
+    return _audioCtx;
+}
+
+// Play a tone with optional exponential frequency sweep and gain fade-out.
+// freq/freqEnd: Hz (must be > 0).  dur: seconds.  vol: 0–1.  delay: offset from now.
+function _tone(freq, freqEnd, dur, type = "sine", vol = 0.25, delay = 0) {
+    const ctx = _getCtx();
+    if (!ctx) return;
+    try {
+        const now = ctx.currentTime + delay;
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.type = type;
+        osc.frequency.setValueAtTime(Math.max(1, freq), now);
+        if (freqEnd !== freq) {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), now + dur);
+        }
+        g.gain.setValueAtTime(vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        osc.start(now);
+        osc.stop(now + dur + 0.02);
+    } catch (e) {}
+}
+
+// Play a white-noise burst with gain fade-out.
+function _noise(dur, vol = 0.12, delay = 0) {
+    const ctx = _getCtx();
+    if (!ctx) return;
+    try {
+        const samples = Math.ceil(ctx.sampleRate * Math.max(0.01, dur));
+        const buf = ctx.createBuffer(1, samples, ctx.sampleRate);
+        const d   = buf.getChannelData(0);
+        for (let i = 0; i < samples; i++) d[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const g = ctx.createGain();
+        src.connect(g);
+        g.connect(ctx.destination);
+        const now = ctx.currentTime + delay;
+        g.gain.setValueAtTime(vol, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        src.start(now);
+        src.stop(now + dur + 0.02);
+    } catch (e) {}
+}
+
+// Cooldown for move sound — prevents per-frame audio spam when a direction is held.
+let _lastMoveSnd = 0;
+
+// ── SFX: all 8 required gameplay sounds plus existing hooks ────────────────────
 export const SFX = {
-    jump:        () => { /* sfx.play("jump")    */ },
-    land:        () => { /* sfx.play("land")    */ },
-    slide:       () => { /* sfx.play("slide")   */ },
-    coin:        () => { /* sfx.play("coin")    */ },
-    loot:        () => { /* sfx.play("loot")    */ },
-    hit:         () => { /* sfx.play("hit")     */ },
-    checkpoint:  () => { /* sfx.play("checkpoint") */ },
-    core:        () => { /* sfx.play("core")    */ },
-    shoot:       () => { /* sfx.play("shoot")   */ },
-    bossHit:     () => { /* sfx.play("bossHit") */ },
-    bossDefeat:  () => { /* sfx.play("defeat")  */ },
-    portal:      () => { /* sfx.play("portal")  */ },
-    complete:    () => { /* sfx.play("complete") */ },
+
+    // 1. Player jumps — rising pitch whoosh
+    jump() {
+        _tone(180, 520, 0.15, "sine", 0.22);
+        _noise(0.08, 0.04);
+    },
+
+    // Landing feedback — soft thud (not in the 8, but already called in player.js)
+    land() {
+        _tone(110, 55, 0.12, "sine", 0.15);
+    },
+
+    // 2. Player slides — downward swoosh
+    slide() {
+        _tone(380, 90, 0.2, "sine", 0.18);
+        _noise(0.15, 0.04);
+    },
+
+    // 3 & 4. Left / Right movement — very subtle step tick, throttled to 80 ms
+    move() {
+        const now = Date.now();
+        if (now - _lastMoveSnd < 80) return;
+        _lastMoveSnd = now;
+        _tone(90, 75, 0.05, "sine", 0.06);
+    },
+
+    // 5. Player hits obstacle — sharp buzzy impact
+    hit() {
+        _noise(0.18, 0.28);
+        _tone(140, 55, 0.22, "sawtooth", 0.18);
+    },
+
+    // 6. Falling obstacle hits ground — deep one-shot thump
+    thud() {
+        _tone(95, 38, 0.18, "sine", 0.32);
+        _noise(0.10, 0.15);
+    },
+
+    // 7. Normal coin collected — bright short ping
+    coin() {
+        _tone(880, 1100, 0.10, "sine", 0.20);
+    },
+
+    // 8. Special loot collected — three-note ascending arpeggio
+    loot() {
+        _tone(440, 440, 0.08, "sine", 0.20, 0.00);
+        _tone(550, 550, 0.08, "sine", 0.20, 0.09);
+        _tone(880, 880, 0.14, "sine", 0.28, 0.18);
+    },
+
+    // Checkpoint — ascending three-note chime
+    checkpoint() {
+        _tone(440, 440, 0.09, "sine", 0.20, 0.00);
+        _tone(550, 550, 0.09, "sine", 0.20, 0.10);
+        _tone(660, 660, 0.14, "sine", 0.25, 0.21);
+    },
+
+    // Recovery core (extra heart) — warm rising tone
+    core() {
+        _tone(440, 660, 0.15, "sine", 0.25);
+        _tone(660, 880, 0.10, "sine", 0.20, 0.13);
+    },
+
+    // Boss / shoot stubs (infrastructure kept for future integration)
+    shoot()      { _tone(600, 200, 0.12, "sawtooth", 0.20); },
+    bossHit()    { _noise(0.12, 0.20); _tone(200, 80, 0.15, "sawtooth", 0.15); },
+    bossDefeat() { _tone(440, 880, 0.30, "sine", 0.30); _noise(0.20, 0.10, 0.10); },
+
+    // Portal entry — whooshing energy surge
+    portal() {
+        _tone(300, 1400, 0.50, "sine", 0.18);
+        _noise(0.35, 0.06);
+    },
+
+    // Domain complete — four-note victory fanfare
+    complete() {
+        _tone(440, 440, 0.10, "sine", 0.20, 0.00);
+        _tone(550, 550, 0.10, "sine", 0.20, 0.12);
+        _tone(660, 660, 0.15, "sine", 0.25, 0.25);
+        _tone(880, 880, 0.25, "sine", 0.30, 0.42);
+    },
 };
+

@@ -85,8 +85,8 @@ scene("countdown", () => {
 scene("game", () => {
     const gameState = {
         timeAlive:        0,
-        lives:            3,
-        maxLives:         3,
+        lives:            5,
+        maxLives:         5,
         speed:            400,
         difficulty:       "Z1",
         bankedScore:      0,
@@ -153,7 +153,7 @@ scene("game", () => {
     let spawnTimer        = 1.0;
     let coinTimer         = rand(1.5, 2.5);
     let specialLootTimer  = rand(10, 15);
-    let recoveryCoreTimer = rand(30, 45);
+    let recoveryCoreTimer = rand(15, 22);
     let nextSpeedChange   = 0;
     let lastDifficulty    = "Z1";
     let maxLivesExpanded  = false;
@@ -593,11 +593,11 @@ scene("game", () => {
             recoveryCoreTimer -= dt();
             if (recoveryCoreTimer <= 0) { 
                 spawnRecoveryCore(); 
-                if      (gameState.difficulty === "Z1")  recoveryCoreTimer = rand(30, 45);
-                else if (gameState.difficulty === "Z2")  recoveryCoreTimer = rand(20, 30);
-                else if (gameState.difficulty === "Z3")  recoveryCoreTimer = rand(15, 22);
-                else if (gameState.difficulty === "MAX") recoveryCoreTimer = rand(10, 15);
-                else                                     recoveryCoreTimer = rand(30, 50);
+                if      (gameState.difficulty === "Z1")  recoveryCoreTimer = rand(15, 22);
+                else if (gameState.difficulty === "Z2")  recoveryCoreTimer = rand(10, 15);
+                else if (gameState.difficulty === "Z3")  recoveryCoreTimer = rand(8,  11);
+                else if (gameState.difficulty === "MAX") recoveryCoreTimer = rand(6,  9);
+                else                                     recoveryCoreTimer = rand(15, 25);
             }
         }
     });

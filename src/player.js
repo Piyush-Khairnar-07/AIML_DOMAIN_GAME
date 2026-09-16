@@ -302,10 +302,10 @@ export function setupPlayer(effects, gameState) {
     }
 
     // ── Keyboard bindings ─────────────────────────────────────────────────────
-    onKeyDown("left",  () => player.move(-getPlayerSpeed(), 0));
-    onKeyDown("a",     () => player.move(-getPlayerSpeed(), 0));
-    onKeyDown("right", () => player.move(getPlayerSpeed(),  0));
-    onKeyDown("d",     () => player.move(getPlayerSpeed(),  0));
+    onKeyDown("left",  () => player.moveLeft());
+    onKeyDown("a",     () => player.moveLeft());
+    onKeyDown("right", () => player.moveRight());
+    onKeyDown("d",     () => player.moveRight());
 
     onKeyPress("space", doJump);
     onKeyPress("up",    doJump);
@@ -318,8 +318,8 @@ export function setupPlayer(effects, gameState) {
 
     // ── Mobile API (same logic, no duplication) ───────────────────────────────
     player.doJump    = doJump;
-    player.moveLeft  = () => player.move(-getPlayerSpeed(), 0);
-    player.moveRight = () => player.move(getPlayerSpeed(),  0);
+    player.moveLeft  = () => { SFX.move(); player.move(-getPlayerSpeed(), 0); };
+    player.moveRight = () => { SFX.move(); player.move(getPlayerSpeed(),  0); };
     player.setSlideInput = (val) => {
         if (!val) {
             isSlideKeyDown         = false;

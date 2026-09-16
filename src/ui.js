@@ -217,40 +217,71 @@ export function setupMobileControls(player) {
 
     const leftBtn  = makeBtn("←", width() - pad - btnSize * 2 - gap, bottomY, [40, 40, 140]);
     const rightBtn = makeBtn("→", width() - pad - btnSize,           bottomY, [40, 40, 140]);
-    const jumpBtn  = makeBtn("↑", pad,                               bottomY, [40, 130, 40]);
-    const slideBtn = makeBtn("↓", pad + btnSize + gap,               bottomY, [130, 120, 30]);
+    const jumpBtn  = makeBtn("↑", pad,                               bottomY - btnSize - gap, [40, 130, 40]);
+    const slideBtn = makeBtn("↓", pad,                               bottomY,                 [130, 120, 30]);
     jumpBtn.use("jump_btn");
 
     let slidingByTouch = false;
 
-    onUpdate(() => {
-        if (isMouseDown()) {
-            const mp = mousePos();
+    // ── Multi-touch via Native Kaplay API ─────────────────────────────────────
+    // Kaplay's onTouchStart automatically maps physical screen touches into 
+    // logical 1280x720 coordinates (the `pos` parameter), bypassing letterbox bugs.
+    
+    const leftIds  = new Set();
+    const rightIds = new Set();
+    const jumpIds  = new Set();
+    const slideIds = new Set();
 
-            leftBtn.opacity  = leftBtn.hasPoint(mp)  ? 0.85 : 0.5;
-            rightBtn.opacity = rightBtn.hasPoint(mp) ? 0.85 : 0.5;
-            slideBtn.opacity = slideBtn.hasPoint(mp) ? 0.85 : 0.5;
-
-            if (leftBtn.hasPoint(mp))  player.moveLeft();
-            if (rightBtn.hasPoint(mp)) player.moveRight();
-
-            if (slideBtn.hasPoint(mp)) {
-                if (!slidingByTouch) { slidingByTouch = true; player.setSlideInput(true); }
-            } else if (slidingByTouch) {
-                slidingByTouch = false;
-                player.setSlideInput(false);
-            }
-        } else {
-            leftBtn.opacity = rightBtn.opacity = slideBtn.opacity = 0.5;
-            if (slidingByTouch) { slidingByTouch = false; player.setSlideInput(false); }
+    onTouchStart((pos, touch) => {
+        if (leftBtn.hasPoint(pos))  leftIds.add(touch.id);
+        if (rightBtn.hasPoint(pos)) rightIds.add(touch.id);
+        
+        if (jumpBtn.hasPoint(pos)) {
+            jumpIds.add(touch.id);
+            player.doJump();
+            jumpBtn.opacity = 0.9;
+            wait(0.12, () => jumpBtn.opacity = 0.5);
+        }
+        
+        if (slideBtn.hasPoint(pos)) {
+            slideIds.add(touch.id);
+            if (!slidingByTouch) { slidingByTouch = true; player.setSlideInput(true); }
         }
     });
 
-    onClick("jump_btn", () => {
-        player.doJump();
-        jumpBtn.opacity = 0.9;
-        wait(0.12, () => jumpBtn.opacity = 0.5);
+    onTouchMove((pos, touch) => {
+        if (jumpIds.has(touch.id))  jumpBtn.opacity  = 0.9;
+        if (slideIds.has(touch.id)) slideBtn.opacity = 0.85;
+        if (leftIds.has(touch.id))  leftBtn.opacity  = 0.85;
+        if (rightIds.has(touch.id)) rightBtn.opacity = 0.85;
     });
+
+    onTouchEnd((pos, touch) => {
+        leftIds.delete(touch.id);
+        rightIds.delete(touch.id);
+        jumpIds.delete(touch.id);
+
+        if (slideIds.has(touch.id)) {
+            slideIds.delete(touch.id);
+            if (slideIds.size === 0 && slidingByTouch) {
+                slidingByTouch = false;
+                player.setSlideInput(false);
+            }
+        }
+
+        if (leftIds.size  === 0) leftBtn.opacity  = 0.5;
+        if (rightIds.size === 0) rightBtn.opacity = 0.5;
+        if (jumpIds.size  === 0) jumpBtn.opacity  = 0.5;
+        if (slideIds.size === 0) slideBtn.opacity = 0.5;
+    });
+
+    // ── Per-frame: drive continuous movement while buttons are held ──────────
+    onUpdate(() => {
+        if (leftIds.size  > 0) player.moveLeft();
+        if (rightIds.size > 0) player.moveRight();
+    });
+
+
 
     // Expose a method to add a Shoot button (called during boss phase by main.js)
     function addShootButton(onShoot) {
