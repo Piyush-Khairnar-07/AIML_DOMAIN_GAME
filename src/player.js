@@ -318,8 +318,8 @@ export function setupPlayer(effects, gameState) {
 
     // ── Mobile API (same logic, no duplication) ───────────────────────────────
     player.doJump    = doJump;
-    player.moveLeft  = () => player.move(-SPEED, 0);
-    player.moveRight = () => player.move(SPEED,  0);
+    player.moveLeft  = () => player.move(-getPlayerSpeed(), 0);
+    player.moveRight = () => player.move(getPlayerSpeed(),  0);
     player.setSlideInput = (val) => {
         if (!val) {
             isSlideKeyDown         = false;

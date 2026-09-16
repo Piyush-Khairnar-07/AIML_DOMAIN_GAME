@@ -188,13 +188,14 @@ export function setupUI(gameState) {
 
 // ── Mobile Controls ────────────────────────────────────────────────────────────
 export function setupMobileControls(player) {
-    const btnSize = 80;
-    const pad     = 20;
+    const btnSize = 100;
+    const pad     = 40;
+    const gap     = 30;
     const bottomY = height() - btnSize - pad;
 
     function makeBtn(label, bx, by, col) {
         const btn = add([
-            rect(btnSize, btnSize, { radius: 12 }),
+            rect(btnSize, btnSize, { radius: 16 }),
             pos(bx, by),
             color(col[0], col[1], col[2]),
             opacity(0.5),
@@ -204,7 +205,7 @@ export function setupMobileControls(player) {
             "ui_btn",
         ]);
         add([
-            text(label, { size: 36, font: "monospace" }),
+            text(label, { size: 48, font: "monospace" }),
             pos(bx + btnSize / 2, by + btnSize / 2),
             anchor("center"),
             color(255, 255, 255),
@@ -214,10 +215,11 @@ export function setupMobileControls(player) {
         return btn;
     }
 
-    const leftBtn  = makeBtn("←", pad,                         bottomY, [40, 40, 140]);
-    const rightBtn = makeBtn("→", pad * 2 + btnSize,           bottomY, [40, 40, 140]);
-    const jumpBtn  = makeBtn("↑", width() - pad * 2 - btnSize * 2, bottomY, [40, 130, 40]);
-    const slideBtn = makeBtn("↓", width() - pad - btnSize,     bottomY, [130, 120, 30]);
+    const leftBtn  = makeBtn("←", width() - pad - btnSize * 2 - gap, bottomY, [40, 40, 140]);
+    const rightBtn = makeBtn("→", width() - pad - btnSize,           bottomY, [40, 40, 140]);
+    const jumpBtn  = makeBtn("↑", pad,                               bottomY, [40, 130, 40]);
+    const slideBtn = makeBtn("↓", pad + btnSize + gap,               bottomY, [130, 120, 30]);
+    jumpBtn.use("jump_btn");
 
     let slidingByTouch = false;
 
@@ -253,8 +255,8 @@ export function setupMobileControls(player) {
     // Expose a method to add a Shoot button (called during boss phase by main.js)
     function addShootButton(onShoot) {
         const shootBtn = add([
-            rect(btnSize, btnSize, { radius: 12 }),
-            pos(width() - pad - btnSize, bottomY - btnSize - pad),
+            rect(btnSize, btnSize, { radius: 16 }),
+            pos(width() - pad - btnSize, bottomY - btnSize - gap),
             color(180, 30, 30),
             opacity(0.6),
             area(),
@@ -264,7 +266,7 @@ export function setupMobileControls(player) {
             "shoot_btn",
         ]);
         add([
-            text("⚡", { size: 36, font: "monospace" }),
+            text("⚡", { size: 48, font: "monospace" }),
             pos(width() - pad - btnSize + btnSize / 2, bottomY - btnSize - pad + btnSize / 2),
             anchor("center"),
             color(255, 255, 255),

@@ -64,7 +64,7 @@ export function setupMessages() {
 
         const timer = document.createElement('div');
         timer.style.cssText = 'font-size: 14px; color: #8080c0; letter-spacing: 1px;';
-        timer.textContent = 'RESUMING IN 3...';
+        timer.textContent = 'RESUMING IN 5...';
 
         card.appendChild(icon);
         card.appendChild(name);
@@ -73,7 +73,7 @@ export function setupMessages() {
         overlay.appendChild(card);
         document.body.appendChild(overlay);
 
-        let remaining = 3;
+        let remaining = 5;
         const tick = setInterval(() => {
             remaining--;
             if (remaining > 0) {
